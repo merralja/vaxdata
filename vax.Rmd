@@ -1,0 +1,417 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(openxlsx) # needed for read.xlsx
+library(readr) # for reading one csv file (walktimes)
+```
+
+
+```{r}
+vaxdf <- read.xlsx(xlsxFile = "./vaxdatabyfsa.xlsx", 
+          sheet = 1, 
+          colNames = TRUE, 
+          detectDates = TRUE) 
+```
+
+
+
+```{r}
+censusdf <- read.csv("./98-401-X2016046_English_CSV_data.csv", header= TRUE)
+```
+
+
+```{r}
+library(tidyr)
+library(dplyr)
+```
+```{r}
+colnames(censusdf)[9:14] <- c("variable", "varnum", "varnote", "ntot", "nmale", "nfemale")
+```
+
+```{r}
+colnames(censusdf)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+censusdf_ont <- censusdf %>% filter(substr(censusdf$GEO_NAME, 1, 1) == "K" | substr(censusdf$GEO_NAME, 1, 1) == "L" | substr(censusdf$GEO_NAME, 1, 1) == "M" | substr(censusdf$GEO_NAME, 1, 1) == "N" | substr(censusdf$GEO_NAME, 1, 1) == "P")
+```
+
+
+```{r}
+rm(censusdf)
+```
+
+```{r}
+colnames(censusdf_ont)
+```
+
+```{r}
+censusdf_ont <- censusdf_ont[,c(4,9,10,12)]
+```
+
+
+
+```{r}
+censusdf_ontc <- censusdf_ont[with(censusdf_ont, !((varnum %in% 118:660) | (varnum %in% 872:1134))), ]
+```
+
+
+```{r}
+rm(censusdf_ont)
+```
+
+
+```{r}
+censusdf_ontc <- censusdf_ontc[with(censusdf_ontc, !((varnum %in% 1715:1774) | (varnum %in% 1778:1836) | (varnum %in% 1884:1919) | (varnum %in% 1950:2229))), ]
+```
+
+
+```{r}
+censusdf_ontc <- censusdf_ontc[with(censusdf_ontc, !((varnum %in% 847:866) | (varnum %in% 1291:1322) | (varnum %in% 1338:1616))), ]
+```
+
+```{r}
+library(maditr)
+```
+
+
+```{r}
+censusdf_ontc$ntot <- as.numeric(censusdf_ontc$ntot)
+```
+
+
+
+
+
+
+
+
+```{r}
+library(forcats)
+```
+
+
+
+```{r}
+censusdf_wide <- censusdf_ontc %>% dcast(GEO_NAME ~ fct_inorder(variable),
+  fun.aggregate = sum)
+```
+
+```{r}
+rm(censusdf_ontc)
+```
+
+
+```{r}
+save.image(file = "./vaxstep1.RData")
+```
+
+
+```{r}
+load("./vaxstep1.RData")
+```
+
+
+
+```{r}
+colnames(censusdf_wide)[1] <- "FSA"
+```
+
+
+```{r}
+newdf <- inner_join(vaxdf, censusdf_wide, by = "FSA")
+```
+
+
+```{r}
+colnames(newdf)[3] <- "casesper100"
+colnames(newdf)[4] <- "hospitper1000"
+colnames(newdf)[5] <- "deathsper1000"
+colnames(newdf)[6] <- "pctvax1dose"
+colnames(newdf)[7] <- "pctvax2doses"
+```
+
+
+```{r}
+newdf$casesper100 <- as.numeric(newdf$casesper100)
+newdf$hospitper1000 <- as.numeric(newdf$hospitper1000)
+newdf$deathsper1000 <- as.numeric(newdf$deathsper1000)
+newdf$pctvax1dose <- as.numeric(newdf$pctvax1dose)
+newdf$pctvax2doses <- as.numeric(newdf$pctvax2doses)
+```
+
+
+
+
+
+```{r}
+summary(lm(pctvax1dose ~ hospitper1000, data=newdf))
+summary(lm(pctvax2doses ~ hospitper1000, data=newdf))
+```
+
+vaccination rate is independent of cases, and death rate. It is negatively correlated to hospitalization rate, though R2 ~ 0.01 so this is uninformative.
+
+```{r}
+colnames(newdf)[43] <- "medianage"
+```
+
+
+```{r}
+colnames(newdf)[44:46]
+```
+
+
+```{r}
+newdf$pcthighrise <- newdf$`Apartment in a building that has five or more storeys`/newdf$`Total - Occupied private dwellings by structural type of dwelling - 100% data`
+```
+
+```{r}
+summary(lm(pctvax2doses ~ pcthighrise + medianage + hospitper1000, data=newdf))
+```
+
+
+```{r}
+colnames(newdf)[61] <- "avghhsize"
+```
+
+
+```{r}
+summary(lm(pctvax2doses ~ pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+
+```{r}
+colnames(newdf)[88:94]
+```
+
+
+```{r}
+newdf$pcthhoneperson <- newdf$`One-person households`/newdf$`Total - Private households by household type - 100% data`
+```
+
+```{r}
+summary(lm(pctvax2doses ~ pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+colnames(newdf)[139] <- "pcrecgovtransfers"
+```
+
+
+```{r}
+summary(lm(pctvax2doses ~ pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+summary(lm(pctvax2doses ~ pcrecgovtransfers + medianage, data=newdf))
+```
+
+```{r}
+library(car)
+```
+
+
+```{r}
+scatterplot(pctvax2doses ~ pcrecgovtransfers, data=newdf)
+```
+
+pctvax2doses ~ pcrecgovtransfers + medianage, data=newdf
+
+
+```{r}
+scatterplot(pctvax2doses ~ medianage, data=newdf)
+```
+
+```{r}
+colnames(newdf)[114] <- "medpersonalATincome"
+```
+
+```{r}
+newdf$logmedpersonalATincome <- log(newdf$medpersonalATincome)
+```
+
+
+
+```{r}
+summary(lm(pctvax2doses ~ logmedpersonalATincome + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+
+```{r}
+colnames(newdf)[120] <- "medemployincome"
+newdf$logmedemployincome <- log(newdf$medemployincome)
+```
+
+```{r}
+summary(lm(pctvax2doses ~ logmedpersonalATincome + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+cor(newdf$logmedemployincome, newdf$logmedpersonalATincome)
+```
+
+```{r}
+colnames(newdf)[249] <- "pc0to17underLICO"
+```
+
+
+```{r}
+summary(lm(pctvax2doses ~ logmedpersonalATincome + pc0to17underLICO + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+cor(newdf$pc0to17underLICO, newdf$pcrecgovtransfers)
+```
+
+```{r}
+cor(newdf$pc0to17underLICO, newdf$logmedpersonalATincome)
+```
+
+
+```{r}
+newdf$pcnotcitizens <- newdf[,257]/newdf[,253]
+```
+
+
+```{r}
+summary(lm(pctvax2doses ~ logmedpersonalATincome + pcnotcitizens + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+cor(newdf$pcnotcitizens, newdf$logmedpersonalATincome)
+```
+```{r}
+pairs(~pcnotcitizens+logmedpersonalATincome+pcthighrise+medianage,data=newdf,
+   main="Simple Scatterplot Matrix")
+```
+
+
+keep checking out new variables.
+
+
+```{r}
+newdf$pctfirstgen <- newdf[,353]/newdf[,352]
+newdf$pctthirdgen <- newdf[,355]/newdf[,352]
+```
+
+```{r}
+summary(lm(pctvax2doses ~ pctfirstgen + pctthirdgen + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+newdf$pctaborid <- newdf[,364]/newdf[,363]
+newdf$pctvismin <- newdf[,366]/newdf[,365]
+newdf$pctblack <- newdf[,369]/newdf[,365]
+newdf$pctsouthasian <- newdf[,367]/newdf[,365]
+newdf$pctchinese <- newdf[,368]/newdf[,365]
+newdf$pctlatam <- newdf[,371]/newdf[,365]
+newdf$pctarab <- newdf[,372]/newdf[,365]
+
+```
+
+
+```{r}
+colnames(newdf[,530:538])
+```
+
+
+
+```{r}
+summary(lm(pctvax2doses ~ pctfirstgen + pctthirdgen + pctaborid + pctvismin + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+# Make a rural/urban categorical
+#
+newdf$urban <- "TRUE"
+newdf[grep("K0", newdf$FSA), "urban" ] <- "FALSE"
+newdf[grep("L0", newdf$FSA), "urban" ] <- "FALSE"
+newdf[grep("N0", newdf$FSA), "urban" ] <- "FALSE"
+newdf[grep("P0", newdf$FSA), "urban" ] <- "FALSE"
+```
+
+
+
+```{r}
+summary(lm(pctvax2doses ~ urban + pctfirstgen + pctthirdgen + pctaborid + pctvismin + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+
+bring in my FSA map.
+
+
+```{r}
+library(sf) # for simple features
+```
+
+```{r}
+FSA.sf <- st_read("./FSAGIS", layer = "lfsa000a16a_e")
+```
+
+```{r}
+FSA.sf <- FSA.sf %>% filter(substr(FSA.sf$CFSAUID, 1, 1) == "K" | substr(FSA.sf$CFSAUID, 1, 1) == "L" | substr(FSA.sf$CFSAUID, 1, 1) == "M" | substr(FSA.sf$CFSAUID, 1, 1) == "N" | substr(FSA.sf$CFSAUID, 1, 1) == "P")
+```
+
+```{r}
+library(tmap)
+```
+
+
+
+```{r}
+tm_shape(FSA.sf) +
+    tm_polygons("CFSAUID")
+```
+
+
+```{r}
+colnames(FSA.sf)[1] <- "FSA"
+```
+
+```{r}
+FSA.sf <- merge(FSA.sf, newdf, by = "FSA", all=TRUE)
+FSA.sf <- merge(FSA.sf, censusdf_wide, by = "FSA", all=TRUE)
+```
+
+```{r}
+tmap_mode("view")
+```
+
+
+
+```{r}
+tm_shape(FSA.sf) +
+    tm_polygons(col = "casesper100" ,
+              legend.hist = TRUE) +
+  tm_layout(legend.outside = TRUE) 
+```
+
+
+
+
+
+then I need to intersect that FSA map with the poll map, count total votes per PARTY (not candidate!) for each FSA, then I can regress with that.
+
+
+
+
+
+
+
+
+
+
+
+
