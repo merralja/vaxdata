@@ -8,8 +8,14 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
 
 ```{r}
+library(car)
+library(dplyr)
+library(forcats)
+library(maditr)
 library(openxlsx) # needed for read.xlsx
 library(readr) # for reading one csv file (walktimes)
+library(tidyr)
+library(tidyverse)
 ```
 
 
@@ -26,11 +32,6 @@ vaxdf <- read.xlsx(xlsxFile = "./vaxdatabyfsa.xlsx",
 censusdf <- read.csv("./98-401-X2016046_English_CSV_data.csv", header= TRUE)
 ```
 
-
-```{r}
-library(tidyr)
-library(dplyr)
-```
 ```{r}
 colnames(censusdf)[9:14] <- c("variable", "varnum", "varnote", "ntot", "nmale", "nfemale")
 ```
@@ -38,11 +39,6 @@ colnames(censusdf)[9:14] <- c("variable", "varnum", "varnote", "ntot", "nmale", 
 ```{r}
 colnames(censusdf)
 ```
-
-```{r}
-library(tidyverse)
-```
-
 
 ```{r}
 censusdf_ont <- censusdf %>% filter(substr(censusdf$GEO_NAME, 1, 1) == "K" | substr(censusdf$GEO_NAME, 1, 1) == "L" | substr(censusdf$GEO_NAME, 1, 1) == "M" | substr(censusdf$GEO_NAME, 1, 1) == "N" | substr(censusdf$GEO_NAME, 1, 1) == "P")
@@ -82,24 +78,9 @@ censusdf_ontc <- censusdf_ontc[with(censusdf_ontc, !((varnum %in% 1715:1774) | (
 censusdf_ontc <- censusdf_ontc[with(censusdf_ontc, !((varnum %in% 847:866) | (varnum %in% 1291:1322) | (varnum %in% 1338:1616))), ]
 ```
 
-```{r}
-library(maditr)
-```
-
 
 ```{r}
 censusdf_ontc$ntot <- as.numeric(censusdf_ontc$ntot)
-```
-
-
-
-
-
-
-
-
-```{r}
-library(forcats)
 ```
 
 
@@ -115,7 +96,7 @@ rm(censusdf_ontc)
 
 
 ```{r}
-save.image(file = "./vaxstep1.RData")
+#save.image(file = "./vaxstep1.RData")
 ```
 
 
@@ -211,23 +192,14 @@ colnames(newdf)[139] <- "pcrecgovtransfers"
 
 
 ```{r}
-summary(lm(pctvax2doses ~ pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+summary(lm(pctvax2doses ~ pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
 ```
 
-```{r}
-summary(lm(pctvax2doses ~ pcrecgovtransfers + medianage, data=newdf))
-```
-
-```{r}
-library(car)
-```
 
 
 ```{r}
 scatterplot(pctvax2doses ~ pcrecgovtransfers, data=newdf)
 ```
-
-pctvax2doses ~ pcrecgovtransfers + medianage, data=newdf
 
 
 ```{r}
@@ -245,7 +217,7 @@ newdf$logmedpersonalATincome <- log(newdf$medpersonalATincome)
 
 
 ```{r}
-summary(lm(pctvax2doses ~ logmedpersonalATincome + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+summary(lm(pctvax2doses ~ logmedpersonalATincome + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
 ```
 
 
@@ -254,9 +226,6 @@ colnames(newdf)[120] <- "medemployincome"
 newdf$logmedemployincome <- log(newdf$medemployincome)
 ```
 
-```{r}
-summary(lm(pctvax2doses ~ logmedpersonalATincome + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
-```
 
 ```{r}
 cor(newdf$logmedemployincome, newdf$logmedpersonalATincome)
@@ -268,7 +237,7 @@ colnames(newdf)[249] <- "pc0to17underLICO"
 
 
 ```{r}
-summary(lm(pctvax2doses ~ logmedpersonalATincome + pc0to17underLICO + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+summary(lm(pctvax2doses ~ logmedpersonalATincome + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
 ```
 
 ```{r}
@@ -286,7 +255,7 @@ newdf$pcnotcitizens <- newdf[,257]/newdf[,253]
 
 
 ```{r}
-summary(lm(pctvax2doses ~ logmedpersonalATincome + pcnotcitizens + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+summary(lm(pctvax2doses ~ logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
 ```
 
 ```{r}
@@ -307,7 +276,7 @@ newdf$pctthirdgen <- newdf[,355]/newdf[,352]
 ```
 
 ```{r}
-summary(lm(pctvax2doses ~ pctfirstgen + pctthirdgen + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+summary(lm(pctvax2doses ~ pctfirstgen + pctthirdgen + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
 ```
 
 ```{r}
@@ -329,8 +298,23 @@ colnames(newdf[,530:538])
 
 
 ```{r}
-summary(lm(pctvax2doses ~ pctfirstgen + pctthirdgen + pctaborid + pctvismin + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+summary(lm(pctvax2doses ~ pctfirstgen + pctthirdgen + pctaborid + pctvismin + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
 ```
+
+Maybe take out vismin, it might be gobbling up something else
+
+
+```{r}
+summary(lm(pctvax2doses ~ pctfirstgen + pctthirdgen + pctaborid + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+max(newdf$pcrecgovtransfers)
+```
+
+So % receiving government transfers is a 0-100 scale
+
+
 
 ```{r}
 # Make a rural/urban categorical
@@ -345,8 +329,124 @@ newdf[grep("P0", newdf$FSA), "urban" ] <- "FALSE"
 
 
 ```{r}
-summary(lm(pctvax2doses ~ urban + pctfirstgen + pctthirdgen + pctaborid + pctvismin + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + pcrecgovtransfers + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+summary(lm(pctvax2doses ~ urban + pctfirstgen + pctthirdgen + pctaborid + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
 ```
+
+
+```{r}
+newdf$pctrenter <- newdf[,382]/newdf[,380]
+```
+
+
+```{r}
+summary(lm(pctvax2doses ~ pctrenter + urban + pctfirstgen + pctthirdgen + pctaborid + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+newdf$pcmajorrepair <- newdf[,411]/newdf[,409]
+```
+
+
+```{r}
+summary(lm(pctvax2doses ~ pcmajorrepair + pctrenter + urban + pctfirstgen + pctthirdgen + pctaborid + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+newdf$logmedvaluedwellings <- log(newdf[,432])
+```
+
+
+```{r}
+summary(lm(pctvax2doses ~ logmedvaluedwellings + pcmajorrepair + pctrenter + urban + pctfirstgen + pctthirdgen + pctaborid + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+
+```{r}
+newdf$pctsubsidizedtenants <- (newdf[,435])
+```
+
+
+
+
+```{r}
+summary(lm(pctvax2doses ~ pctsubsidizedtenants + logmedvaluedwellings + pcmajorrepair + pctrenter + urban + pctfirstgen + pctthirdgen + pctaborid + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+
+```{r}
+newdf$pct15upnoHS <- newdf[,440]/newdf[,439]
+```
+
+
+```{r}
+summary(lm(pctvax2doses ~ pct15upnoHS + pctsubsidizedtenants + logmedvaluedwellings + pcmajorrepair + pctrenter + urban + pctfirstgen + pctthirdgen + pctaborid + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+newdf$FSAunemployrate <- newdf[,473]
+```
+
+
+```{r}
+summary(lm(pctvax2doses ~ FSAunemployrate + pct15upnoHS + pctsubsidizedtenants + logmedvaluedwellings + pcmajorrepair + pctrenter + urban + pctfirstgen + pctthirdgen + pctaborid + pctvismin + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+U
+```{r}
+newdf$pctakepubtranstowork <- newdf[,498]/newdf[,495]
+```
+
+
+```{r}
+summary(lm(pctvax2doses ~ pctakepubtranstowork + FSAunemployrate + pct15upnoHS + pctsubsidizedtenants + logmedvaluedwellings + pcmajorrepair + pctrenter + urban + pctfirstgen + pctthirdgen + pctaborid + pctvismin + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+```
+
+```{r}
+a <- vif(lm(pctvax2doses ~ pctakepubtranstowork + FSAunemployrate + pct15upnoHS + pctsubsidizedtenants + logmedvaluedwellings + pcmajorrepair + pctrenter + urban + pctfirstgen + pctthirdgen + pctaborid + pctvismin + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf))
+a
+names(a)
+```
+
+Now we can stepwise refine using step
+
+(see https://www.sfu.ca/~mjbrydon/tutorials/BAinR/multiregression.html#model-refinement)
+
+```{r}
+mymodel <- lm(pctvax2doses ~ pctakepubtranstowork + FSAunemployrate + pct15upnoHS + pctsubsidizedtenants + logmedvaluedwellings + pcmajorrepair + pctrenter + urban + pctfirstgen + pctthirdgen + pctaborid + pctvismin + pctblack + pctsouthasian + pctchinese + pctlatam + pctarab + logmedpersonalATincome + pcnotcitizens + pc0to17underLICO + pcrecgovtransfers + pcthhoneperson + pcthighrise + medianage + hospitper1000 + avghhsize, data=newdf)
+```
+
+
+```{r}
+model.step <- step(mymodel)
+```
+
+```{r}
+summary(model.step)
+```
+
+We improved the results in R2 and F
+
+================
+
+The old results were:
+
+Residual standard error: 0.03373 on 427 degrees of freedom
+  (58 observations deleted due to missingness)
+Multiple R-squared:  0.7145,	Adjusted R-squared:  0.6972 
+F-statistic: 41.11 on 26 and 427 DF,  p-value: < 2.2e-16
+
+================
+
+
+```{r}
+qqnorm(resid(model.step))
+qqline(resid(model.step))
+```
+
+
+
+
+
 
 
 bring in my FSA map.
@@ -382,14 +482,13 @@ colnames(FSA.sf)[1] <- "FSA"
 
 ```{r}
 FSA.sf <- merge(FSA.sf, newdf, by = "FSA", all=TRUE)
-FSA.sf <- merge(FSA.sf, censusdf_wide, by = "FSA", all=TRUE)
 ```
 
 ```{r}
 tmap_mode("view")
 ```
 
-
+Plot cases per 100 people and you see the biggest problem was in and around Brampton, and Morningside in Scarborough. Nothing else even compares.
 
 ```{r}
 tm_shape(FSA.sf) +
@@ -397,6 +496,26 @@ tm_shape(FSA.sf) +
               legend.hist = TRUE) +
   tm_layout(legend.outside = TRUE) 
 ```
+
+Let's look at double vax rate now.
+
+
+```{r}
+tm_shape(FSA.sf) +
+    tm_polygons(col = "pctvax2doses" , alpha=0.5,
+              legend.hist = TRUE) +
+  tm_layout(legend.outside = TRUE) 
+```
+
+
+
+
+
+Now let's continue finding more variables.
+
+
+
+
 
 
 
